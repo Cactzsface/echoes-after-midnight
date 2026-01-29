@@ -1,224 +1,208 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!DOCTYPE html>
 <html>
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta http-equiv="Content-Style-Type" content="text/css">
-  <title></title>
-  <meta name="Generator" content="Cocoa HTML Writer">
-  <meta name="CocoaVersion" content="2575.7">
-  <style type="text/css">
-    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
-    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
-  </style>
+<meta charset="UTF-8">
+<title>Echoes After Midnight - Metroidvania 2.0</title>
+<style>
+body { margin:0; background:#0a0a14; overflow:hidden; }
+canvas { display:block; margin:auto; background:#0f1020; }
+</style>
 </head>
 <body>
-<p class="p1">&lt;!DOCTYPE html&gt;</p>
-<p class="p1">&lt;html&gt;</p>
-<p class="p1">&lt;head&gt;</p>
-<p class="p1">&lt;meta charset="UTF-8"&gt;</p>
-<p class="p1">&lt;title&gt;Echoes After Midnight - Metroidvania 2.0&lt;/title&gt;</p>
-<p class="p1">&lt;style&gt;</p>
-<p class="p1">body { margin:0; background:#0a0a14; overflow:hidden; }</p>
-<p class="p1">canvas { display:block; margin:auto; background:#0f1020; }</p>
-<p class="p1">&lt;/style&gt;</p>
-<p class="p1">&lt;/head&gt;</p>
-<p class="p1">&lt;body&gt;</p>
-<p class="p2"><br></p>
-<p class="p1">&lt;canvas id="game" width="800" height="600"&gt;&lt;/canvas&gt;</p>
-<p class="p2"><br></p>
-<p class="p1">&lt;script&gt;</p>
-<p class="p1">const canvas = document.getElementById("game");</p>
-<p class="p1">const ctx = canvas.getContext("2d");</p>
-<p class="p2"><br></p>
-<p class="p1">let keys = {};</p>
-<p class="p2"><br></p>
-<p class="p1">const worldRooms = ["hub","dashRoom","boss1","phaseRoom","comboRoom","boss2"];</p>
-<p class="p2"><br></p>
-<p class="p1">const rooms = {</p>
-<p class="p1"><span class="Apple-converted-space">  </span>hub: { exits:{down:"dashRoom"}, gates:[] },</p>
-<p class="p1"><span class="Apple-converted-space">  </span>dashRoom: { exits:{up:"hub",right:"boss1"}, gates:[{x:360,y:250,w:80,h:20,type:"dash"}] },</p>
-<p class="p1"><span class="Apple-converted-space">  </span>boss1: { exits:{left:"dashRoom",down:"phaseRoom"}, boss:"chaser" },</p>
-<p class="p1"><span class="Apple-converted-space">  </span>phaseRoom: { exits:{up:"boss1",right:"comboRoom"}, gates:[{x:700,y:200,w:20,h:200,type:"phase"}] },</p>
-<p class="p1"><span class="Apple-converted-space">  </span>comboRoom: {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>exits:{left:"phaseRoom",right:"boss2"},</p>
-<p class="p1"><span class="Apple-converted-space">    </span>gates:[{x:200,y:100,w:100,h:20,type:"combo"}], // needs dash + phase</p>
-<p class="p1"><span class="Apple-converted-space">    </span>teleport:[{x:650,y:400,w:40,h:40,target:"boss2"}] // teleport shortcut</p>
-<p class="p1"><span class="Apple-converted-space">  </span>},</p>
-<p class="p1"><span class="Apple-converted-space">  </span>boss2: { exits:{left:"comboRoom"}, boss:"warden" }</p>
-<p class="p1">};</p>
-<p class="p2"><br></p>
-<p class="p1">const player = {</p>
-<p class="p1"><span class="Apple-converted-space">  </span>x: 380, y: 280, size: 40,</p>
-<p class="p1"><span class="Apple-converted-space">  </span>speed: 4,</p>
-<p class="p1"><span class="Apple-converted-space">  </span>health: 100,</p>
-<p class="p1"><span class="Apple-converted-space">  </span>memories: 0,</p>
-<p class="p1"><span class="Apple-converted-space">  </span>dash: false,</p>
-<p class="p1"><span class="Apple-converted-space">  </span>phase: false</p>
-<p class="p1">};</p>
-<p class="p2"><br></p>
-<p class="p1">let room = "hub";</p>
-<p class="p1">let boss = null;</p>
-<p class="p1">let discoveredRooms = new Set([room]);</p>
-<p class="p2"><br></p>
-<p class="p1">document.addEventListener("keydown", e =&gt; keys[e.key.toLowerCase()] = true);</p>
-<p class="p1">document.addEventListener("keyup", e =&gt; keys[e.key.toLowerCase()] = false);</p>
-<p class="p2"><br></p>
-<p class="p1">// ------------------- UTILS -------------------</p>
-<p class="p1">function collide(a,b){</p>
-<p class="p1"><span class="Apple-converted-space">  </span>return a.x &lt; b.x+b.w &amp;&amp; a.x+a.size&gt;b.x &amp;&amp; a.y&lt;b.y+b.h &amp;&amp; a.y+a.size&gt;b.y;</p>
-<p class="p1">}</p>
-<p class="p2"><br></p>
-<p class="p1">// ------------------- SAVE SYSTEM -------------------</p>
-<p class="p1">function saveGame() {</p>
-<p class="p1"><span class="Apple-converted-space">  </span>const saveData = {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>room,</p>
-<p class="p1"><span class="Apple-converted-space">    </span>x: player.x,</p>
-<p class="p1"><span class="Apple-converted-space">    </span>y: player.y,</p>
-<p class="p1"><span class="Apple-converted-space">    </span>health: player.health,</p>
-<p class="p1"><span class="Apple-converted-space">    </span>memories: player.memories,</p>
-<p class="p1"><span class="Apple-converted-space">    </span>dash: player.dash,</p>
-<p class="p1"><span class="Apple-converted-space">    </span>phase: player.phase,</p>
-<p class="p1"><span class="Apple-converted-space">    </span>discoveredRooms: Array.from(discoveredRooms)</p>
-<p class="p1"><span class="Apple-converted-space">  </span>};</p>
-<p class="p1"><span class="Apple-converted-space">  </span>localStorage.setItem("echoesSave", JSON.stringify(saveData));</p>
-<p class="p1">}</p>
-<p class="p2"><br></p>
-<p class="p1">function loadGame() {</p>
-<p class="p1"><span class="Apple-converted-space">  </span>const data = JSON.parse(localStorage.getItem("echoesSave"));</p>
-<p class="p1"><span class="Apple-converted-space">  </span>if (data) {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>room = data.room;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>player.x = data.x;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>player.y = data.y;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>player.health = data.health;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>player.memories = data.memories;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>player.dash = data.dash;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>player.phase = data.phase;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>discoveredRooms = new Set(data.discoveredRooms);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>}</p>
-<p class="p1">}</p>
-<p class="p2"><br></p>
-<p class="p1">// Auto-load</p>
-<p class="p1">loadGame();</p>
-<p class="p2"><br></p>
-<p class="p1">// ------------------- GAME MECHANICS -------------------</p>
-<p class="p1">function spawnBoss(type) {</p>
-<p class="p1"><span class="Apple-converted-space">  </span>if (!type) return;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>boss = {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>x: 350, y: 100, size: 80,</p>
-<p class="p1"><span class="Apple-converted-space">    </span>health: type==="chaser"?120:200,</p>
-<p class="p1"><span class="Apple-converted-space">    </span>speed: type==="chaser"?2.5:1.2,</p>
-<p class="p1"><span class="Apple-converted-space">    </span>type</p>
-<p class="p1"><span class="Apple-converted-space">  </span>};</p>
-<p class="p1">}</p>
-<p class="p2"><br></p>
-<p class="p1">function changeRoom(newRoom) {</p>
-<p class="p1"><span class="Apple-converted-space">  </span>room = newRoom;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>player.x = 380;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>player.y = 280;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>boss = null;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>discoveredRooms.add(newRoom);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>saveGame();</p>
-<p class="p1">}</p>
-<p class="p2"><br></p>
-<p class="p1">function update() {</p>
-<p class="p1"><span class="Apple-converted-space">  </span>let speed = player.speed;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>if (keys.shift &amp;&amp; player.dash) speed = 8;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>if (keys.w) player.y -= speed;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>if (keys.s) player.y += speed;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>if (keys.a) player.x -= speed;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>if (keys.d) player.x += speed;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>// Room bounds &amp; exits</p>
-<p class="p1"><span class="Apple-converted-space">  </span>if (player.x &lt; 0 &amp;&amp; rooms[room].exits.left) changeRoom(rooms[room].exits.left);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>if (player.x &gt; 760 &amp;&amp; rooms[room].exits.right) changeRoom(rooms[room].exits.right);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>if (player.y &lt; 0 &amp;&amp; rooms[room].exits.up) changeRoom(rooms[room].exits.up);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>if (player.y &gt; 560 &amp;&amp; rooms[room].exits.down) changeRoom(rooms[room].exits.down);</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>// Gates</p>
-<p class="p1"><span class="Apple-converted-space">  </span>(rooms[room].gates||[]).forEach(g=&gt;{</p>
-<p class="p1"><span class="Apple-converted-space">    </span>if (collide(player,g)){</p>
-<p class="p1"><span class="Apple-converted-space">      </span>if (g.type==="dash" &amp;&amp; !player.dash || g.type==="phase" &amp;&amp; !player.phase || g.type==="combo" &amp;&amp; !(player.dash &amp;&amp; player.phase)){</p>
-<p class="p1"><span class="Apple-converted-space">        </span>player.x -= speed; player.y -= speed;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>}</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">  </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>// Teleports</p>
-<p class="p1"><span class="Apple-converted-space">  </span>(rooms[room].teleport||[]).forEach(t=&gt;{</p>
-<p class="p1"><span class="Apple-converted-space">    </span>if (collide(player,t)) changeRoom(t.target);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>// Boss</p>
-<p class="p1"><span class="Apple-converted-space">  </span>if (rooms[room].boss &amp;&amp; !boss) spawnBoss(rooms[room].boss);</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>if (boss) {</p>
-<p class="p1"><span class="Apple-converted-space">    </span>let dx = player.x - boss.x;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>let dy = player.y - boss.y;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>let d = Math.hypot(dx,dy);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>boss.x += (dx/d) * boss.speed;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>boss.y += (dy/d) * boss.speed;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>if (Math.hypot(dx,dy) &lt; 60 &amp;&amp; keys[" "]) boss.health -= 2;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>if (Math.hypot(dx,dy) &lt; 60) player.health -= 0.4;</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">    </span>if (boss.health &lt;= 0){</p>
-<p class="p1"><span class="Apple-converted-space">      </span>if (boss.type==="chaser") player.dash = true;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>if (boss.type==="warden") player.phase = true;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>boss = null;</p>
-<p class="p1"><span class="Apple-converted-space">      </span>saveGame();</p>
-<p class="p1"><span class="Apple-converted-space">    </span>}</p>
-<p class="p1"><span class="Apple-converted-space">  </span>}</p>
-<p class="p1">}</p>
-<p class="p2"><br></p>
-<p class="p1">// ------------------- DRAW -------------------</p>
-<p class="p1">function draw() {</p>
-<p class="p1"><span class="Apple-converted-space">  </span>ctx.clearRect(0,0,800,600);</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>// Player</p>
-<p class="p1"><span class="Apple-converted-space">  </span>ctx.fillStyle="#66ccff";</p>
-<p class="p1"><span class="Apple-converted-space">  </span>ctx.fillRect(player.x,player.y,40,40);</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>// Gates</p>
-<p class="p1"><span class="Apple-converted-space">  </span>(rooms[room].gates||[]).forEach(g=&gt;{</p>
-<p class="p1"><span class="Apple-converted-space">    </span>ctx.fillStyle = g.type==="dash"?"#ff4444":g.type==="phase"?"#4444ff":"#ff44ff";</p>
-<p class="p1"><span class="Apple-converted-space">    </span>ctx.fillRect(g.x,g.y,g.w,g.h);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>// Teleports</p>
-<p class="p1"><span class="Apple-converted-space">  </span>(rooms[room].teleport||[]).forEach(t=&gt;{</p>
-<p class="p1"><span class="Apple-converted-space">    </span>ctx.fillStyle="#44ff44";</p>
-<p class="p1"><span class="Apple-converted-space">    </span>ctx.fillRect(t.x,t.y,t.w,t.h);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>// Boss</p>
-<p class="p1"><span class="Apple-converted-space">  </span>if (boss) { ctx.fillStyle="#ff8888"; ctx.fillRect(boss.x,boss.y,boss.size,boss.size); }</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>// Mini-map</p>
-<p class="p1"><span class="Apple-converted-space">  </span>const mapX = 600, mapY = 10, size = 30;</p>
-<p class="p1"><span class="Apple-converted-space">  </span>worldRooms.forEach((r,i)=&gt;{</p>
-<p class="p1"><span class="Apple-converted-space">    </span>ctx.fillStyle = discoveredRooms.has(r)?(r===room?"#66ff66":"#888888"):"#222222";</p>
-<p class="p1"><span class="Apple-converted-space">    </span>ctx.fillRect(mapX + i*35, mapY, size, size);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>});</p>
-<p class="p2"><br></p>
-<p class="p1"><span class="Apple-converted-space">  </span>// UI</p>
-<p class="p1"><span class="Apple-converted-space">  </span>ctx.fillStyle="white";</p>
-<p class="p1"><span class="Apple-converted-space">  </span>ctx.font="18px Arial";</p>
-<p class="p1"><span class="Apple-converted-space">  </span>ctx.fillText("Room: "+room,10,25);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>ctx.fillText("Health: "+Math.floor(player.health),10,50);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>ctx.fillText("Memories: "+player.memories,10,75);</p>
-<p class="p1"><span class="Apple-converted-space">  </span>ctx.fillText("Dash: "+player.dash+" | Phase: "+player.phase,10,100);</p>
-<p class="p1">}</p>
-<p class="p2"><br></p>
-<p class="p1">function loop() {</p>
-<p class="p1"><span class="Apple-converted-space">  </span>update();</p>
-<p class="p1"><span class="Apple-converted-space">  </span>draw();</p>
-<p class="p1"><span class="Apple-converted-space">  </span>requestAnimationFrame(loop);</p>
-<p class="p1">}</p>
-<p class="p1">loop();</p>
-<p class="p1">&lt;/script&gt;</p>
-<p class="p2"><br></p>
-<p class="p1">&lt;/body&gt;</p>
-<p class="p1">&lt;/html&gt;</p>
+
+<canvas id="game" width="800" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let keys = {};
+
+const worldRooms = ["hub","dashRoom","boss1","phaseRoom","comboRoom","boss2"];
+
+const rooms = {
+  hub: { exits:{down:"dashRoom"}, gates:[] },
+  dashRoom: { exits:{up:"hub",right:"boss1"}, gates:[{x:360,y:250,w:80,h:20,type:"dash"}] },
+  boss1: { exits:{left:"dashRoom",down:"phaseRoom"}, boss:"chaser" },
+  phaseRoom: { exits:{up:"boss1",right:"comboRoom"}, gates:[{x:700,y:200,w:20,h:200,type:"phase"}] },
+  comboRoom: {
+    exits:{left:"phaseRoom",right:"boss2"},
+    gates:[{x:200,y:100,w:100,h:20,type:"combo"}], // needs dash + phase
+    teleport:[{x:650,y:400,w:40,h:40,target:"boss2"}] // teleport shortcut
+  },
+  boss2: { exits:{left:"comboRoom"}, boss:"warden" }
+};
+
+const player = {
+  x: 380, y: 280, size: 40,
+  speed: 4,
+  health: 100,
+  memories: 0,
+  dash: false,
+  phase: false
+};
+
+let room = "hub";
+let boss = null;
+let discoveredRooms = new Set([room]);
+
+document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+// ------------------- UTILS -------------------
+function collide(a,b){
+  return a.x < b.x+b.w && a.x+a.size>b.x && a.y<b.y+b.h && a.y+a.size>b.y;
+}
+
+// ------------------- SAVE SYSTEM -------------------
+function saveGame() {
+  const saveData = {
+    room,
+    x: player.x,
+    y: player.y,
+    health: player.health,
+    memories: player.memories,
+    dash: player.dash,
+    phase: player.phase,
+    discoveredRooms: Array.from(discoveredRooms)
+  };
+  localStorage.setItem("echoesSave", JSON.stringify(saveData));
+}
+
+function loadGame() {
+  const data = JSON.parse(localStorage.getItem("echoesSave"));
+  if (data) {
+    room = data.room;
+    player.x = data.x;
+    player.y = data.y;
+    player.health = data.health;
+    player.memories = data.memories;
+    player.dash = data.dash;
+    player.phase = data.phase;
+    discoveredRooms = new Set(data.discoveredRooms);
+  }
+}
+
+// Auto-load
+loadGame();
+
+// ------------------- GAME MECHANICS -------------------
+function spawnBoss(type) {
+  if (!type) return;
+  boss = {
+    x: 350, y: 100, size: 80,
+    health: type==="chaser"?120:200,
+    speed: type==="chaser"?2.5:1.2,
+    type
+  };
+}
+
+function changeRoom(newRoom) {
+  room = newRoom;
+  player.x = 380;
+  player.y = 280;
+  boss = null;
+  discoveredRooms.add(newRoom);
+  saveGame();
+}
+
+function update() {
+  let speed = player.speed;
+  if (keys.shift && player.dash) speed = 8;
+
+  if (keys.w) player.y -= speed;
+  if (keys.s) player.y += speed;
+  if (keys.a) player.x -= speed;
+  if (keys.d) player.x += speed;
+
+  // Room bounds & exits
+  if (player.x < 0 && rooms[room].exits.left) changeRoom(rooms[room].exits.left);
+  if (player.x > 760 && rooms[room].exits.right) changeRoom(rooms[room].exits.right);
+  if (player.y < 0 && rooms[room].exits.up) changeRoom(rooms[room].exits.up);
+  if (player.y > 560 && rooms[room].exits.down) changeRoom(rooms[room].exits.down);
+
+  // Gates
+  (rooms[room].gates||[]).forEach(g=>{
+    if (collide(player,g)){
+      if (g.type==="dash" && !player.dash || g.type==="phase" && !player.phase || g.type==="combo" && !(player.dash && player.phase)){
+        player.x -= speed; player.y -= speed;
+      }
+    }
+  });
+
+  // Teleports
+  (rooms[room].teleport||[]).forEach(t=>{
+    if (collide(player,t)) changeRoom(t.target);
+  });
+
+  // Boss
+  if (rooms[room].boss && !boss) spawnBoss(rooms[room].boss);
+
+  if (boss) {
+    let dx = player.x - boss.x;
+    let dy = player.y - boss.y;
+    let d = Math.hypot(dx,dy);
+    boss.x += (dx/d) * boss.speed;
+    boss.y += (dy/d) * boss.speed;
+
+    if (Math.hypot(dx,dy) < 60 && keys[" "]) boss.health -= 2;
+    if (Math.hypot(dx,dy) < 60) player.health -= 0.4;
+
+    if (boss.health <= 0){
+      if (boss.type==="chaser") player.dash = true;
+      if (boss.type==="warden") player.phase = true;
+      boss = null;
+      saveGame();
+    }
+  }
+}
+
+// ------------------- DRAW -------------------
+function draw() {
+  ctx.clearRect(0,0,800,600);
+
+  // Player
+  ctx.fillStyle="#66ccff";
+  ctx.fillRect(player.x,player.y,40,40);
+
+  // Gates
+  (rooms[room].gates||[]).forEach(g=>{
+    ctx.fillStyle = g.type==="dash"?"#ff4444":g.type==="phase"?"#4444ff":"#ff44ff";
+    ctx.fillRect(g.x,g.y,g.w,g.h);
+  });
+
+  // Teleports
+  (rooms[room].teleport||[]).forEach(t=>{
+    ctx.fillStyle="#44ff44";
+    ctx.fillRect(t.x,t.y,t.w,t.h);
+  });
+
+  // Boss
+  if (boss) { ctx.fillStyle="#ff8888"; ctx.fillRect(boss.x,boss.y,boss.size,boss.size); }
+
+  // Mini-map
+  const mapX = 600, mapY = 10, size = 30;
+  worldRooms.forEach((r,i)=>{
+    ctx.fillStyle = discoveredRooms.has(r)?(r===room?"#66ff66":"#888888"):"#222222";
+    ctx.fillRect(mapX + i*35, mapY, size, size);
+  });
+
+  // UI
+  ctx.fillStyle="white";
+  ctx.font="18px Arial";
+  ctx.fillText("Room: "+room,10,25);
+  ctx.fillText("Health: "+Math.floor(player.health),10,50);
+  ctx.fillText("Memories: "+player.memories,10,75);
+  ctx.fillText("Dash: "+player.dash+" | Phase: "+player.phase,10,100);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+
 </body>
 </html>
